@@ -55,6 +55,34 @@ function MethodWrapper(_defaultWrapper, _defaultWrapperContext) {
             }
         });
     };
+
+    /**
+     * @param {string} sMethodName
+     * @param {object} oContext
+     * @param {object} oWrapperContext
+     * @param {string=} sWrapperFunction
+     */
+    this.wrapWithObject = function(sMethodName, oContext, oWrapperContext, sWrapperFunction) {
+        var fOriginal = oContext[sMethodName];
+        var wrapperMethod = sWrapperFunction
+            ? oWrapperContext[sWrapperFunction]
+            : oWrapperContext[sMethodName];
+
+        oContext[sMethodName] = function () {
+            wrapperMethod.apply(oWrapperContext, arguments);
+            return fOriginal.apply(oContext, arguments);
+        };
+        oContext[sMethodName].unwrapped = fOriginal;
+        this.h.push({
+            _oContext: oContext,
+            _sMethodName: sMethodName,
+            _original: fOriginal,
+            unwrap: function() {
+                this._oContext[this._sMethodName] = this._original;
+            }
+        });
+    };
+
     this.unwrapAll = function() {
         for (var i in this.h) {
             this.h[i].unwrap();
@@ -63,19 +91,21 @@ function MethodWrapper(_defaultWrapper, _defaultWrapperContext) {
 }
 
 // Test Object
-var t = {
-    r : function (a, b, c) {
-        return (a + b + c);
-    }
-};
+function testMethodWrapper() {
+    var t = {
+        r : function (a, b, c) {
+            return (a + b + c);
+        }
+    };
 
-t.r(1,2,3);
+    t.r(1,2,3);
 
-var w = new MethodWrapper(function(orig, a) {
-    console.log(orig + "," + a);
-});
-w.wrap('r', t);
+    var w = new MethodWrapper(function(orig, a) {
+        console.log(orig + "," + a);
+    });
+    w.wrap('r', t);
 
-t.r(3, 4, 5);
-w.unwrapAll();
-t.r(6, 7, 8);
+    t.r(3, 4, 5);
+    w.unwrapAll();
+    t.r(6, 7, 8);
+}
